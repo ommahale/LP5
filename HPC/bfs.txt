@@ -1,105 +1,70 @@
 #include <iostream>
-#include <stdlib.h>
-#include <queue>
-#include <time.h>
+#include<vector>
+#include<stack>
+#include<omp.h>
 
 using namespace std;
 
-class node{
-    public:
-    node *left, *right;
-    int data;
-};
-class BFS{
-    public:
-    node * insert(node*, int);
-    void bfs(node*);
-};
+void parallel_bfs(vector<vector<int>>&graph, int source){
+    int n = graph.size();
+    vector<bool> visited(n, false);
+    stack<int> q;
 
-node* insert(node* root, int data){
-    if (!root){
-        root  =  new node;
-        root->left = NULL;
-        root->right = NULL;
-        root->data = data;
-        return root;
-    }
-    queue<node*> q;
-    q.push(root);
-    while (!q.empty()){
-        node* temp = q.front();
+    q.push(source);
+    visited[source]=true;
+    
+    while(!q.empty())
+    {
+        int u;
+        u = q.top();
         q.pop();
-        if(temp->left==NULL){
-            temp->left = new node;
-            temp->left->left = NULL;
-            temp->left->right = NULL;
-            temp->left->data = data;
-            return root;
-
-        }
-        else{
-            q.push(temp->right);
-        }
-        if(temp->right==NULL){
-            temp->right = new node;
-            temp->right->left = NULL;
-            temp->right->right = NULL;
-            temp->right->data = data;
-            return root;
-
-        }
-        else{
-            q.push(temp->right);
-        }
-    }
-    return root;
-}
-
-void bfs(node* root){
-    queue<node*>q;
-    q.push(root);
-
-    int qSize;
-    while(!q.empty()){
-        qSize = q.size();
-        #pragma omp parallel for
-        for (int i = 0; i < qSize; i++)
+        #pragma omp parallel for 
+        for (int i = 0; i < graph[u].size(); i++)
         {
-            node* currNode;
-            #pragma omp critical
-            {
-                currNode = q.front();
-                q.pop();
-                cout<<currNode->data<<" ";
+            int v = graph[u][i];
+            if(!visited[v]){
+                #pragma omp critical
+                {
+                    visited[v]=true;
+                    q.push(v);
+                }
+
             }
-            #pragma omp critical
-            {
-                if(currNode->left)
-                    q.push(currNode->left);
-                if(currNode->right)
-                    q.push(currNode->right);
-            }
+        }
+        #pragma omp single
+        {        
+            cout<<u<<endl;
         }
         
+        
+        
     }
-}
 
-int main(){
-    srand(time(NULL));
-    int size;
-    cout<<"Enter array size: ";
-    cin>>size;
-    int arr[size];
-    for (int i = 0; i < size; i++)
-    {
-        arr[i] = rand()%100;
+}
+int main() {
+    int n, m;
+    cout << "Enter the number of vertices: ";
+    cin >> n;
+
+    vector<vector<int>> graph(n);
+
+    cout << "Enter the number of edges: ";
+    cin >> m;
+
+    cout << "Enter the edges (u v) one per line:" << endl;
+    for (int i = 0; i < m; i++) {
+        int u, v;
+        cin >> u >> v;
+        graph[u].push_back(v);
+        // Uncomment the following line if the graph is undirected
+        // graph[v].push_back(u);
     }
-    cout<<arr;
-    node* root = NULL;
-    for (int i = 0; i < size; i++)
-    {
-        root = insert(root, arr[i]);
-    }
-    bfs(root);
+
+    int source;
+    cout << "Enter the source vertex: ";
+    cin >> source;
+
+    parallel_bfs(graph, source);
+
     return 0;
 }
